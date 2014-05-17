@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/geom2d.addons']);
+addpath([libs.dir_custom filesep 'geom2d.addons']);

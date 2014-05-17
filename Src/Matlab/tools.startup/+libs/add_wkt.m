@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/wkt']);
+addpath([libs.dir_custom filesep 'wkt']);

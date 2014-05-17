@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/tools.math']);
+addpath([libs.dir_custom filesep 'tools.math']);

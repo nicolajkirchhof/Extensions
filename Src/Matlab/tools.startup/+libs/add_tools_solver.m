@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/tools.solver']);
+addpath([libs.dir_custom filesep 'tools.solver']);

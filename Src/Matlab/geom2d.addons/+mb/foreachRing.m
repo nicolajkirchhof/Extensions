@@ -1,6 +1,10 @@
 function outpoly = foreachRing( inpoly, fcn )
 %FOREACHRING Summary of this function goes here
 %   Detailed explanation goes here
+if ~isa(fcn, 'function_handle') 
+    error('fcn must be a function handle');
+end
+
 outpoly = {};
 for idp = 1:numel(inpoly)
     if iscell(inpoly{idp})

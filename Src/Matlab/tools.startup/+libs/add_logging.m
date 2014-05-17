@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/logging']);
+addpath([libs.dir_custom '/logging']);

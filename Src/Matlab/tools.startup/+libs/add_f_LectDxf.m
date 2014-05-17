@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '../f_LectDxf']);
+addpath([libs.dir_extern filesep 'f_LectDxf']);

@@ -1,3 +1,3 @@
-function path = dir_custom()
-    path = [fileparts(mfilename('fullpath')) filesep '..' filesep '..' filesep '..' filesep '..' filesep 'Libs' filesep 'Matlab']
+function path = dir_extern()
+    path = [getenv('home') 'Projects' filesep 'Extensions' filesep 'Libs' filesep 'Matlab'];
 end

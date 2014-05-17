@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/tools.draw']);
+addpath([libs.dir_custom filesep 'tools.draw']);

@@ -1,1 +1,1 @@
-addpath([fileparts(mfilename('fullpath')) '/../mex']);
+addpath([libs.dir_mex])

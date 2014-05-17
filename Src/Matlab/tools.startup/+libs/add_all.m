@@ -4,7 +4,8 @@ for ide = 1:numel(exts)
     if strcmp(exts(ide).name, [base '.m'])
         continue
     end
-    run([path filesep exts(ide).name]);
+    [fpath, fbase, fext] = fileparts(exts(ide).name);
+    eval(['libs.' fbase]);
 end
 %
 % run ext_f_LectDxf.m
