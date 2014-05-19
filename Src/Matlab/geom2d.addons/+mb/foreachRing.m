@@ -5,6 +5,11 @@ if ~isa(fcn, 'function_handle')
     error('fcn must be a function handle');
 end
 
+if ~iscell(inpoly)
+    outpoly = fcn(inpoly);
+    return;
+end
+
 outpoly = {};
 for idp = 1:numel(inpoly)
     if iscell(inpoly{idp})
