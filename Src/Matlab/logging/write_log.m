@@ -1,51 +1,53 @@
 function write_log(str, varargin)
-persistent fid ident enabled
-if isempty(str)
-    return;
-elseif strcmp(str, '#on')
-    str = '#logging is on';
-    enabled = true;
-elseif strcmp(str, '#off')
-    write_log('#logging is off');
-    enabled = false;
-end
+% write_log logs the given message to the console or a choosen file.
+% str = the string or printf statement to log
+% varargin = optional variables or options
+%
+% options can be applied by leaving str = [] and using one of the following
+% options tags:
+%   #on      = turns logging on [default]
+%   #off     = turns logging off
+%   #fileon  = writes log to file, name can be applied as next parameter
+%   #fileoff = stops the file logging and closes file
+
+persistent fid ident enabled fileenabled
 if isempty(enabled)
     ident = [];
     enabled = true;
-    if nargin > 0
-        if ischar(str)
-            %% this part is quite errorprone and should be considererd to be removed
-            [~, ~, ext] = fileparts(str);
-            if strcmpi(ext, '.log')
-                fid = fopen(str, 'w');
-            else
-                warning('filename does not end on .log, using default output instead');
-                fid = 1;
-                write_log(str);
-            end
-        elseif isnumeric(str)
-            fid = str;
-        else
-            warning('cannot assign output using console...');
-            fid = 1;
-        end
-    else
-        filename = ['log_', datestr(now, 30) '.log'];
-        fid = fopen(filename, 'w');        
-    end
-    return;
+    fileenabled = false;
+    fid = [1];
 end
-if ~enabled
+
+if isempty(str)
+    if nargin > 1
+        switch (varargin{1})
+            case '#on'
+                fprintf(1, '#logging is on\n');
+                enabled = true;
+            case '#off'
+                fprintf(1, '#logging is off\n');
+                enabled = false;
+            case '#fileon'
+                if nargin > 2 && ~isempty(varargin{2}) && isstr(varargin{2})
+                    filename = varargin{2};
+                else
+                    filename = ['log_', datestr(now, 30) '.log'];
+                end
+                fid = fopen(filename, 'w');
+                fileenabled = true;
+                fprintf(1, '#logging to file is on\n');
+            case '#fileoff'
+                fclose(fid);
+                fprintf(1, '#logging to file is off\n');
+            otherwise
+                fprintf(1, '#logging option %s not recognized \n', varargin{1});
+        end
+    end
     return;
 end
 
-if strcmp(str, '#close')
-    if fid > 0
-   fclose(fid);
-   clear fid;
-   return;
-    end
-elseif strcmp(str(1), ' ')
+% change indention
+if strcmp(str(1), ' ')
     str = str(2:end);
     ident = [ident '\t'];
 elseif strcmp(str(end), ' ')
@@ -53,33 +55,22 @@ elseif strcmp(str(end), ' ')
     ident = ident(1:end-2);
 end
 
-if nargin > 1
-    fprintf(fid, [ident str], varargin{:});
-else
-    fprintf(fid, [ident str]);
+if nargin == 1
+    str = [str '\n'];
 end
-fprintf(fid, '\n');
+   
+if fileenabled
+    fprintf(fid, [ident str], varargin{:});
+end
+if enabled
+    fprintf(1, [ident str], varargin{:});
+end
 
 return;
 %% Testing start
-write_log('this is not a file');
-write_log('logging...');
-clear write_log
-write_log('this_is_a_file.log');
-write_log('logging...');
-write_log('close');
-fid = fopen('this_is_a_file.log');
-if fid > 0
-fscanf(fid, '%s')
-fclose(fid);
-end
-delete 'this_is_a_file.log';
-clear write_log
-write_log(1);
 write_log('logging...');
 clear write_log
 %% testing ident
-clear write_log
 write_log('logging...');
 write_log(' starting ident');
 write_log('log in ident');
@@ -89,20 +80,36 @@ write_log('ending ident ');
 write_log('log in ident');
 write_log('ending ident ');
 write_log('log in ident');
+clear write_log
 %% testing enable
-clear write_log
 write_log('logging...');
 write_log(' starting ident');
 write_log('ending ident ');
-write_log('#off'); 
+write_log([], '#off');
 write_log('log in offmode');
 write_log('log in offmode');
-write_log('#on'); 
-write_log('log in ident');
-write_log('log in ident');
-
-
-
-
+write_log([], '#on');
+write_log('log in onmode');
+write_log('log in onmode');
+clear write_log
+%% testing filemode
+filename = 'test.log';
+write_log('logging...');
+write_log(' starting ident');
+write_log('ending ident ');
+write_log([], '#fileon', filename);
+logstring = 'log in filemode';
+write_log(logstring);
+write_log([], '#fileoff');
+fid = fopen(filename);
+filestring = fgetl(fid);
+fclose(fid);
+if strcmp(filestring, logstring)
+    fprintf(1, 'TEST: writing to file\n\t SUCCESS\n');
+    delete(filename);
+else
+    fprintf(1, 'TEST: writing to file\n\t FAILURE\n');
+end
+clear write_log
 
 
