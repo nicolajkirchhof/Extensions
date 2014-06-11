@@ -1,9 +1,9 @@
-function [poly_merged] = mergePolygonPointsAngularDist(poly, phi, center)
+function [poly_merged] = removePolygonAngularSpikes(poly, phi, center)
 %% mergePolygonPointsAngularDist(poly, phi) merges the points in a polygon 
 % depending on their angular distance with respect to the center, which is a 
 % point of the poly. By default center is the first point.
 
-poly_merged = [];
+poly_merged = poly;
 if isempty(poly)
     return;
 end
