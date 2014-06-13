@@ -1,9 +1,9 @@
-function [poly_merged] = removePolygonAngularSpikes(poly, phi, center)
+function [poly_cleaned] = removePolygonAngularSpikes(poly, phi, center)
 %% mergePolygonPointsAngularDist(poly, phi) merges the points in a polygon 
 % depending on their angular distance with respect to the center, which is a 
 % point of the poly. By default center is the first point.
 
-poly_merged = poly;
+poly_cleaned = poly;
 if isempty(poly)
     return;
 end
@@ -23,132 +23,155 @@ end
 %     point_center = poly(:,1);
 % end
 %%%
+% outer_ring_cleaned = [];
 outer_ring = poly(:, 2:end-1);
-id_start = 1;
-id_next = 2;
 
-id_end = size(outer_ring, 2);
-id_previous = id_end -1;
-
-ids_outer_ring = [id_start, id_end];
+num_points = size(poly, 2);
+id_first = 1;
+id_second = 2;
+id_third = 3;
 point_dists = sqrt(sum((bsxfun(@minus, outer_ring, point_center).^2), 1));
-merge_dists = point_dists.*tan(phi);
-is_all_merged = false;
-%%
-while ~is_all_merged 
-    %%
-    merge_dist_min_forward = min(merge_dists([id_start, id_next]));
-    merge_dist_min_backward = min(merge_dists([id_previous, id_end]));
-    
-    edge_length_forward = sqrt(sum((outer_ring(:,id_start)-outer_ring(:, id_next)).^2, 1));
-    edge_length_backward = sqrt(sum((outer_ring(:,id_previous)-outer_ring(:, id_end)).^2, 1));
+merge_dists = [inf, point_dists.*tan(phi), inf];
 
-    is_mergeable_forward = merge_dist_min_forward > edge_length_forward;
-    is_mergeable_backward = merge_dist_min_backward > edge_length_backward;
+% fun_check_edge_spike = @(pe1, pe2, p3, dmin) mb.distancePointEdge(p3, [pe1;pe2]) < dmin;
+poly_cleaned = [];
+fun_pointOnEdge = @(p1, p2, pos) int64(double(p1)+double(-p1+p2)*pos); 
+hpt = [];
+hply = [];
+%%
+while id_third <= num_points
+    %%
+%     if ~isempty(hpt)
+%         delete(hpt); delete(hply);
+%     end        
+cla        
+    p1 = poly(:, id_first);
+    p2 = poly(:, id_second);
+    p3 = poly(:, id_third);
     
-    %%% check if merge point is valid
-%     cla,    Environment.draw(environment, false);
-    is_inside_foreward = true;
-    if is_mergeable_forward
-    poly_forward = [point_center, outer_ring(:,[id_start, id_next+1]), point_center];
-    is_inside_foreward = binpolygon(outer_ring(:,id_next), poly_forward,10);
-%     mb.drawPoint(outer_ring(:,id_next), 'color', 'k');
-%     mb.drawPolygon(poly_forward, 'color', 'm');
-    end
-    is_inside_backward = true;
-    if is_mergeable_backward 
-    poly_backward = [point_center, outer_ring(:,[id_previous-1, id_end]), point_center];
-    is_inside_backward = binpolygon(outer_ring(:,id_previous), poly_backward,10);
-%     mb.drawPoint(poly_backward, 'color', 'r');
-%     mb.drawPolygon(poly_backward, 'color', 'b');
-    end
-%%%
-    if id_next < id_previous
-        % pt must be added
-        if is_inside_foreward
-            ids_outer_ring = [ids_outer_ring, id_next];
-            id_start = id_next;
+    hpt = mb.drawPoint([p1, p2, p3], 'marker',  '+');
+    hply = mb.drawPolygon([p1, p2, p3, p1], 'color', 'm');
+    
+    is_merged = false;
+    [dist_merge_spike] = mb.distancePoints(p3, p1);
+    merge_dist_test = min(merge_dists([id_first, id_third]));
+    if dist_merge_spike < merge_dist_test && mb.distancePoints(p2, p1) > dist_merge_spike && mb.distancePoints(p2, p3) > dist_merge_spike
+        mb.drawPoint([p1, p3], 'color', 'r');
+        poly_cleaned = [poly_cleaned p1];
+        is_merged = true;
+    else   
+        [dist_left, nearest_left] = mb.distancePointEdge(p1, [p2; p3]);
+        if dist_left < merge_dist_test && nearest_left > 0 && nearest_left < 1
+            mb.drawPoint([p1], 'color', 'r');
+            point_nearest = fun_pointOnEdge(p2,p3, nearest_left);
+            poly_cleaned = [poly_cleaned, point_nearest, p3];
+            is_merged = true;
+        else         
+            [dist_right, nearest_right] = mb.distancePointEdge(p3, [p1; p2]);
+            if dist_right < merge_dist_test && nearest_right > 0 && nearest_right < 1
+                mb.drawPoint([p3], 'color', 'r');
+                point_nearest = fun_pointOnEdge(p1,p2, nearest_right);
+                poly_cleaned = [poly_cleaned, p1, point_nearest];
+                poly(:, id_third) = point_nearest;
+                is_merged = true;
+            end
         end
-        if is_inside_backward
-            ids_outer_ring = [ids_outer_ring, id_previous];
-            id_end = id_previous;
-        end
-        id_next = id_next + 1;
-        id_previous = id_previous - 1;
-    elseif id_next == id_previous
-        if is_inside_foreward || is_inside_backward
-            ids_outer_ring = [ids_outer_ring, id_next];
-        end
-        is_all_merged = true;
     end
-    % last index
-    if id_next > id_previous
-        if is_inside_backward && is_inside_foreward
-            is_all_merged = true;
-        elseif is_mergeable_forward
-            id_previous = id_next;
-        else%if is_mergeable_backward
-            id_next = id_previous;
+    fprintf(1, 'ismerged : %d\n', is_merged)
+    fprintf(1, 'idf = %d, ids = %d, idt = %d \n', id_first, id_second, id_third);
+    
+    if is_merged 
+        %%
+        id_first = id_third;
+        id_second = id_first+1;
+        id_third = id_second + 1;
+        if id_third > num_points
+            poly_cleaned = [poly_cleaned, poly(:, id_first)];
         end
-%         is_all_merged = true;
+    else
+        poly_cleaned = [poly_cleaned, p1];
+        id_first = id_second;
+        id_second = id_third;
+        id_third = id_third + 1;
     end
-%     fprintf(1, 'ids=%d idn=%d idp=%d ide=%d merged=%d\n',  [id_start, id_next, id_previous, id_end, is_all_merged]);
-%     fprintf(1, '%d ', ids_outer_ring);
-%     fprintf(1, '\n');
 end
 %%
-ids_outer_ring_sorted = unique(ids_outer_ring);
-poly_merged = [point_center, outer_ring(:, ids_outer_ring_sorted), point_center];
+if id_first <= num_points
+    poly_cleaned = [poly_cleaned, poly(:, id_first)];
+    if id_second <= num_points
+        poly_cleaned = [poly_cleaned, poly(:, id_second)];
+    end
+end
+
 
 return;
 %% TEST with equal number of ring points to merge
-phi = 0.06;
+phi = deg2rad(6);
 poly = int64([ 344, 3844, 3844, 3464, 344, 344 ; 4351, 1200, 1587, 1587, 4764, 4351 ;  ]);
 center = [ 3844 ; 1200 ; 1.5708 ;  ];
 %%
 poly_m = mb.mergePolygonPointsAngularDist(poly, phi, center);
-
+poly_s = mb.removePolygonAngularSpikes(poly_m, phi, center);
+%%
+poly = fliplr(poly);
+poly_m = mb.mergePolygonPointsAngularDist(fliplr(poly), phi, center);
+poly_s = mb.removePolygonAngularSpikes(poly_m, phi, center);
+%%
+cla
 mb.drawPolygon(poly, 'color', 'r');
 mb.drawPoint(poly, 'color', 'r', 'marker', '*');
 mb.drawPolygon(poly_m, 'color', 'g');
 mb.drawPoint(poly_m, 'color', 'g');
 
+mb.drawPolygon(poly_s, 'color', 'm');
+mb.drawPoint(poly_s, 'color', 'm', 'marker', '+');
+
+%% TEST Spike Middle
+phi = deg2rad(6);
+poly = int64([ 344, 3844, 3844, 3464, 344, 344 ; 4351, 1200, 1587, 1587, 4764, 4351 ;  ]);
+center = [ 3844 ; 1200 ; 1.5708 ;  ];
+
 %%
-phi = 0.06;
+phi = deg2rad(6);
 poly = int64([ 344, 3844, 3844, 3464, 344, 344, 344 ; 4351, 1200, 1587, 1587, 4764, 4666, 4351 ;  ]);
 center = [ 3844 ; 1200 ; 1.5708 ;  ];
 %%
 poly_m = mb.mergePolygonPointsAngularDist(poly, phi, center);
+poly_s = mb.removePolygonAngularSpikes(poly, phi,center);
 
+cla
 mb.drawPolygon(poly, 'color', 'r');
 mb.drawPoint(poly, 'color', 'r', 'marker', '*');
 mb.drawPolygon(poly_m, 'color', 'g');
 mb.drawPoint(poly_m, 'color', 'g');
 
+mb.drawPolygon(poly_s, 'color', 'm');
+mb.drawPoint(poly_s, 'color', 'k', 'marker', '+', 'markersize', 20);
 %% TEST
 clear variables;
 format long;
 filename = 'res\floorplans\P1-Seminarraum.dxf';
-options = Configurations.Discretization.iterative;
+discretization = Configurations.Discretization.iterative;
 
 environment = Environment.load(filename);
-options.workspace.positions.additional = 50;
+discretization.workspace.positions.additional = 50;
 
-workspace_positions = Discretization.Workspace.iterative( environment, options );
+workspace_positions = Discretization.Workspace.iterative( environment, discretization );
 
 % options = config;
 %%%
 % for npts = randi(800, 1, 20)
 % npts = 100;
-options.sensorspace.poses.additional = 0;
+discretization.sensorspace.poses.additional = 0;
 %%%
 cla
 Environment.draw(environment, false);
 environment.obstacles{end+1} = environment.mountable;
 environment.mountable = {};
-options.sensorspace.resolution.angular = deg2rad(5);
+discretization.sensorspace.resolution.angular = deg2rad(5);
+debug.remove_spikes = false;
 %%%
-[sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, options);
+[sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, discretization, debug);
 
 % Discretization.Sensorspace.draw(sensor_poses);
 % cellfun(@(p) mb.drawPoint(p{1}{1}(:,2), 'color', 'g'), vfovs)
@@ -162,12 +185,17 @@ for id_vfov = 1:numel(vfovs)
     center = sensor_poses(:, id_vfov);
     poly = vfovs{id_vfov}{1}{1};
     poly_m = mb.mergePolygonPointsAngularDist(poly, phi, center);
+    poly_s = mb.removePolygonAngularSpikes(poly_m, phi, center);
     cla;
    Environment.draw(environment, false); 
 mb.drawPolygon(poly, 'color', 'r');
 mb.drawPoint(poly, 'color', 'r', 'marker', '*');
 mb.drawPolygon(poly_m, 'color', 'g');
 mb.drawPoint(poly_m, 'color', 'g');
+
+mb.drawPolygon(poly_s, 'color', 'm');
+mb.drawPoint(poly_s, 'color', 'k', 'marker', '+', 'markersize', 20);
+
 disp(id_vfov);
 pause;
 end

@@ -1,4 +1,4 @@
-function [poly_merged] = mergePolygonPointsAngularDist(poly, phi, center)
+function [poly_merged, tags] = mergePolygonPointsAngularDist(poly, phi, center)
 %% mergePolygonPointsAngularDist(poly, phi) merges the points in a polygon 
 % depending on their angular distance with respect to the center, which is a 
 % point of the poly. By default center is the first point.
@@ -34,6 +34,7 @@ ids_outer_ring = [id_start, id_end];
 point_dists = sqrt(sum((bsxfun(@minus, outer_ring, point_center).^2), 1));
 merge_dists = point_dists.*tan(phi);
 is_all_merged = false;
+tag = [];
 %%
 while ~is_all_merged 
     %%
@@ -52,15 +53,23 @@ while ~is_all_merged
     if is_mergeable_forward
     poly_forward = [point_center, outer_ring(:,[id_start, id_next+1]), point_center];
     is_inside_foreward = binpolygon(outer_ring(:,id_next), poly_forward,10);
-%     mb.drawPoint(outer_ring(:,id_next), 'color', 'k');
-%     mb.drawPolygon(poly_forward, 'color', 'm');
+     if is_inside_foreward
+        write_log('left tagged')
+        tag = [tag, id_next];
+    end
+     mb.drawPoint(outer_ring(:,id_next), 'color', 'k');
+    mb.drawPolygon(poly_forward, 'color', 'm');
     end
     is_inside_backward = true;
     if is_mergeable_backward 
     poly_backward = [point_center, outer_ring(:,[id_previous-1, id_end]), point_center];
     is_inside_backward = binpolygon(outer_ring(:,id_previous), poly_backward,10);
-%     mb.drawPoint(poly_backward, 'color', 'r');
-%     mb.drawPolygon(poly_backward, 'color', 'b');
+    if is_inside_backward
+        write_log('right tagged');
+        tag = [tag, id_previous];
+    end
+    mb.drawPoint(poly_backward, 'color', 'r');
+    mb.drawPolygon(poly_backward, 'color', 'b');
     end
 %%%
     if id_next < id_previous
@@ -92,9 +101,11 @@ while ~is_all_merged
         end
 %         is_all_merged = true;
     end
-%     fprintf(1, 'ids=%d idn=%d idp=%d ide=%d merged=%d\n',  [id_start, id_next, id_previous, id_end, is_all_merged]);
-%     fprintf(1, '%d ', ids_outer_ring);
-%     fprintf(1, '\n');
+    fprintf(1, 'ids=%d idn=%d idp=%d ide=%d merged=%d\n ids:',  [id_start, id_next, id_previous, id_end, is_all_merged]);
+    fprintf(1, '%d ', ids_outer_ring);
+    fprintf(1, '\n tag:');
+    fprintf(1, '%d ', tag);
+    fprintf(1, '\n');
 end
 %%
 ids_outer_ring_sorted = unique(ids_outer_ring);
