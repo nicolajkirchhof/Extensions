@@ -1,4 +1,4 @@
-function [poly_merged, tags] = mergePolygonPointsAngularDist(poly, phi, center)
+function [poly_merged, tags] = mergePolygonPointsAngularDist(poly, phi, center, debug)
 %% mergePolygonPointsAngularDist(poly, phi) merges the points in a polygon 
 % depending on their angular distance with respect to the center, which is a 
 % point of the poly. By default center is the first point.
@@ -6,6 +6,13 @@ function [poly_merged, tags] = mergePolygonPointsAngularDist(poly, phi, center)
 poly_merged = [];
 if isempty(poly)
     return;
+end
+
+if nargin < 4 || isempty(debug)
+    debug.verbose = false;
+    debug.log = @(txt) write_log(txt);
+else
+    debug.log = @(txt) 1;
 end
 
 % if nargin > 2
@@ -54,7 +61,7 @@ while ~is_all_merged
     poly_forward = [point_center, outer_ring(:,[id_start, id_next+1]), point_center];
     is_inside_foreward = binpolygon(outer_ring(:,id_next), poly_forward,10);
      if is_inside_foreward
-        write_log('left tagged')
+        debug.log('left tagged')
         tag = [tag, id_next];
     end
      mb.drawPoint(outer_ring(:,id_next), 'color', 'k');
@@ -65,11 +72,13 @@ while ~is_all_merged
     poly_backward = [point_center, outer_ring(:,[id_previous-1, id_end]), point_center];
     is_inside_backward = binpolygon(outer_ring(:,id_previous), poly_backward,10);
     if is_inside_backward
-        write_log('right tagged');
+        debug.log('right tagged');
         tag = [tag, id_previous];
     end
+    if debug.verbose
     mb.drawPoint(poly_backward, 'color', 'r');
     mb.drawPolygon(poly_backward, 'color', 'b');
+    end
     end
 %%%
     if id_next < id_previous
@@ -101,15 +110,21 @@ while ~is_all_merged
         end
 %         is_all_merged = true;
     end
+    if debug.verbose
     fprintf(1, 'ids=%d idn=%d idp=%d ide=%d merged=%d\n ids:',  [id_start, id_next, id_previous, id_end, is_all_merged]);
     fprintf(1, '%d ', ids_outer_ring);
     fprintf(1, '\n tag:');
     fprintf(1, '%d ', tag);
     fprintf(1, '\n');
+    end 
 end
 %%
 ids_outer_ring_sorted = unique(ids_outer_ring);
 poly_merged = [point_center, outer_ring(:, ids_outer_ring_sorted), point_center];
+tags = false(1, size(poly_merged, 2));
+[~, id_tags] = intersect( ids_outer_ring_sorted, tag );
+tags(id_tags+1) = true;
+% mb.drawPoint(poly_merged(:, tags), 'color', 'r');
 
 return;
 %% TEST with equal number of ring points to merge
@@ -170,15 +185,17 @@ options.sensorspace.resolution.angular = deg2rad(5);
 for id_vfov = 1:numel(vfovs)
     %%
     phi = deg2rad(6);
+    debug.verbose = false;
     center = sensor_poses(:, id_vfov);
     poly = vfovs{id_vfov}{1}{1};
-    poly_m = mb.mergePolygonPointsAngularDist(poly, phi, center);
+    [poly_m, tags] = mb.mergePolygonPointsAngularDist(poly, phi, center,debug);
     cla;
    Environment.draw(environment, false); 
 mb.drawPolygon(poly, 'color', 'r');
 mb.drawPoint(poly, 'color', 'r', 'marker', '*');
 mb.drawPolygon(poly_m, 'color', 'g');
 mb.drawPoint(poly_m, 'color', 'g');
+mb.drawPoint(poly_m(:, tags), 'color', 'm', 'marker', '^', 'markersize', 18);
 disp(id_vfov);
 pause;
 end
