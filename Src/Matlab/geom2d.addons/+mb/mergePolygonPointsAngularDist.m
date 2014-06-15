@@ -1,10 +1,12 @@
-function [poly_merged, tags] = mergePolygonPointsAngularDist(poly, phi, center, debug)
+function [poly_merged, is_changed] = mergePolygonPointsAngularDist(poly, phi, center, debug)
 %% mergePolygonPointsAngularDist(poly, phi) merges the points in a polygon 
 % depending on their angular distance with respect to the center, which is a 
 % point of the poly. By default center is the first point.
 
+
 poly_merged = [];
 if isempty(poly)
+    is_changed = false;
     return;
 end
 
@@ -14,7 +16,8 @@ if nargin < 4 || isempty(debug)
 else
     debug.log = @(txt) 1;
 end
-
+is_changed = true;
+while is_changed
 % if nargin > 2
     %%
     point_center = int64(center(1:2));
@@ -41,10 +44,21 @@ ids_outer_ring = [id_start, id_end];
 point_dists = sqrt(sum((bsxfun(@minus, outer_ring, point_center).^2), 1));
 merge_dists = point_dists.*tan(phi);
 is_all_merged = false;
+is_changed = false;
 tag = [];
+if debug.verbose
+gh = {};
+Environment.draw(environment, false);
+end
 %%
 while ~is_all_merged 
     %%
+    if debug.verbose; 
+        cellfun(@delete, gh); 
+        gh = {}; 
+        gh{end+1} = mb.drawPoint(outer_ring(:,[id_previous, id_end]), 'color', [0.3 0.3 0.3], 'marker', '+', 'markersize', 20);
+        gh{end+1} = mb.drawPoint(outer_ring(:,[id_start, id_next]), 'color', [0.6 0.6 0.6], 'marker', '+', 'markersize', 20);
+    end
     merge_dist_min_forward = min(merge_dists([id_start, id_next]));
     merge_dist_min_backward = min(merge_dists([id_previous, id_end]));
     
@@ -55,29 +69,30 @@ while ~is_all_merged
     is_mergeable_backward = merge_dist_min_backward > edge_length_backward;
     
     %%% check if merge point is valid
-%     cla,    Environment.draw(environment, false);
     is_inside_foreward = true;
     if is_mergeable_forward
     poly_forward = [point_center, outer_ring(:,[id_start, id_next+1]), point_center];
     is_inside_foreward = binpolygon(outer_ring(:,id_next), poly_forward,10);
-     if is_inside_foreward
-        debug.log('left tagged')
-        tag = [tag, id_next];
+%      if is_inside_foreward
+%         debug.log('left tagged')
+%         tag = [tag, id_next];
+%     end
+    if debug.verbose
+      gh{end+1} = mb.drawPoint(outer_ring(:,id_next), 'color', 'k');
+      gh{end+1} = mb.drawPolygon(poly_forward, 'color', 'm');
     end
-     mb.drawPoint(outer_ring(:,id_next), 'color', 'k');
-    mb.drawPolygon(poly_forward, 'color', 'm');
     end
     is_inside_backward = true;
     if is_mergeable_backward 
     poly_backward = [point_center, outer_ring(:,[id_previous-1, id_end]), point_center];
     is_inside_backward = binpolygon(outer_ring(:,id_previous), poly_backward,10);
-    if is_inside_backward
-        debug.log('right tagged');
-        tag = [tag, id_previous];
-    end
+%     if is_inside_backward
+%         debug.log('right tagged');
+%         tag = [tag, id_previous];
+%     end
     if debug.verbose
-    mb.drawPoint(poly_backward, 'color', 'r');
-    mb.drawPolygon(poly_backward, 'color', 'b');
+    gh{end+1} = mb.drawPoint(outer_ring(:,id_previous), 'color', 'r');
+    gh{end+1} = mb.drawPolygon(poly_backward, 'color', 'b');
     end
     end
 %%%
@@ -90,6 +105,9 @@ while ~is_all_merged
         if is_inside_backward
             ids_outer_ring = [ids_outer_ring, id_previous];
             id_end = id_previous;
+        end
+        if ~is_inside_foreward || ~is_inside_backward
+            is_changed = true;
         end
         id_next = id_next + 1;
         id_previous = id_previous - 1;
@@ -111,19 +129,23 @@ while ~is_all_merged
 %         is_all_merged = true;
     end
     if debug.verbose
-    fprintf(1, 'ids=%d idn=%d idp=%d ide=%d merged=%d\n ids:',  [id_start, id_next, id_previous, id_end, is_all_merged]);
+    fprintf(1, 'ids=%d idn=%d idp=%d ide=%d merged=%d changed=%d\n ids:',  [id_start, id_next, id_previous, id_end, is_all_merged, is_changed]);
     fprintf(1, '%d ', ids_outer_ring);
-    fprintf(1, '\n tag:');
-    fprintf(1, '%d ', tag);
+%      fprintf(1, '\n changed: %');
+%     fprintf(1, '%d ', tag);
     fprintf(1, '\n');
     end 
 end
 %%
 ids_outer_ring_sorted = unique(ids_outer_ring);
-poly_merged = [point_center, outer_ring(:, ids_outer_ring_sorted), point_center];
-tags = false(1, size(poly_merged, 2));
-[~, id_tags] = intersect( ids_outer_ring_sorted, tag );
-tags(id_tags+1) = true;
+poly = [point_center, outer_ring(:, ids_outer_ring_sorted), point_center];
+end
+poly_merged = poly;
+
+
+% tags = false(1, size(poly_merged, 2));
+% [~, id_tags] = intersect( ids_outer_ring_sorted, tag );
+% tags(id_tags+1) = true;
 % mb.drawPoint(poly_merged(:, tags), 'color', 'r');
 
 return;
@@ -173,9 +195,13 @@ Environment.draw(environment, false);
 environment.obstacles{end+1} = environment.mountable;
 environment.mountable = {};
 options.sensorspace.resolution.angular = deg2rad(5);
-%%%
-[sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, options);
+debug.remove_spikes = false;
 
+%% angular merge and spike not included
+[sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, options, debug);
+vfovs = mb.flattenPolygon(vfovs);
+%% both included
+[sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, options);
 % Discretization.Sensorspace.draw(sensor_poses);
 % cellfun(@(p) mb.drawPoint(p{1}{1}(:,2), 'color', 'g'), vfovs)
 % Discretization.Sensorspace.draw(sensor_poses_mountables, 'g');
@@ -187,8 +213,10 @@ for id_vfov = 1:numel(vfovs)
     phi = deg2rad(6);
     debug.verbose = false;
     center = sensor_poses(:, id_vfov);
-    poly = vfovs{id_vfov}{1}{1};
+    poly = vfovs{id_vfov};
     [poly_m, tags] = mb.mergePolygonPointsAngularDist(poly, phi, center,debug);
+%     [poly_s, tags] = mb.mergePolygonPointsAngularDist(poly_m, phi, center, debug);
+    
     cla;
    Environment.draw(environment, false); 
 mb.drawPolygon(poly, 'color', 'r');
@@ -196,6 +224,9 @@ mb.drawPoint(poly, 'color', 'r', 'marker', '*');
 mb.drawPolygon(poly_m, 'color', 'g');
 mb.drawPoint(poly_m, 'color', 'g');
 mb.drawPoint(poly_m(:, tags), 'color', 'm', 'marker', '^', 'markersize', 18);
+%         mb.drawPolygon(poly_s, 'color', 'm');
+%     mb.drawPoint(poly_s, 'color', 'k', 'marker', '+', 'markersize', 20);
+
 disp(id_vfov);
 pause;
 end

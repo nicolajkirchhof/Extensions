@@ -1,4 +1,4 @@
-function [poly_cleaned] = removePolygonAngularSpikes(poly, phi, center, tags)
+function [poly_cleaned] = removePolygonAngularSpikes(poly, phi, center)
 %% mergePolygonPointsAngularDist(poly, phi) merges the points in a polygon
 % depending on their angular distance with respect to the center, which is a
 % point of the poly. By default center is the first point.
@@ -6,10 +6,6 @@ function [poly_cleaned] = removePolygonAngularSpikes(poly, phi, center, tags)
 poly_cleaned = poly;
 if isempty(poly)
     return;
-end
-
-if nargin < 4
-    tags = false(1, size(poly, 2));
 end
 
 % if nargin > 2
@@ -55,8 +51,8 @@ while id_third <= num_points
     p2 = poly(:, id_second);
     p3 = poly(:, id_third);
     
-    hpt = mb.drawPoint([p1, p2, p3], 'marker',  '+');
-    hply = mb.drawPolygon([p1, p2, p3, p1], 'color', 'm');
+%     hpt = mb.drawPoint([p1, p2, p3], 'marker',  '+');
+%     hply = mb.drawPolygon([p1, p2, p3, p1], 'color', 'm');
     
     is_merged = false;
     [dist_merge_spike] = mb.distancePoints(p3, p1);
@@ -67,8 +63,8 @@ while id_third <= num_points
             && mb.distancePoints(p2, p1) > dist_merge_spike && mb.distancePoints(p2, p3) > dist_merge_spike
 %         poly_test = [point_center, [p1, p3], point_center];
 %         if ~binpolygon(p2, poly_test,10);
-            write_log('mergeable')
-            mb.drawPoint([p1, p3], 'color', 'r');
+%             write_log('mergeable')
+%             mb.drawPoint([p1, p3], 'color', 'r');
             poly_cleaned = [poly_cleaned p1];
             is_merged = true;
 %         end
@@ -78,8 +74,8 @@ while id_third <= num_points
             && nearest_left > 0 && nearest_left < 1
 %             poly_test = [point_center, [p2, p3], point_center];
 %             if ~binpolygon(p1, poly_test,10);
-                write_log('left')
-                mb.drawPoint([p1], 'color', 'r');
+%                 write_log('left')
+%                 mb.drawPoint([p1], 'color', 'r');
                 point_nearest = fun_pointOnEdge(p2,p3, nearest_left);
                 poly_cleaned = [poly_cleaned, point_nearest, p3];
                 is_merged = true;
@@ -90,8 +86,8 @@ while id_third <= num_points
                     && nearest_right > 0 && nearest_right < 1
 %                 poly_test = [point_center, [p1, p2], point_center];
 %                 if ~binpolygon(p1, poly_test,10);
-                    write_log('right')
-                    mb.drawPoint([p3], 'color', 'r');
+%                     write_log('right')
+%                     mb.drawPoint([p3], 'color', 'r');
                     point_nearest = fun_pointOnEdge(p1,p2, nearest_right);
                     poly_cleaned = [poly_cleaned, p1, point_nearest];
                     poly(:, id_third) = point_nearest;
@@ -101,8 +97,8 @@ while id_third <= num_points
         end
     end
     end
-    fprintf(1, 'ismerged : %d\n', is_merged)
-    fprintf(1, 'idf = %d, ids = %d, idt = %d \n', id_first, id_second, id_third);
+%     fprintf(1, 'ismerged : %d\n', is_merged)
+%     fprintf(1, 'idf = %d, ids = %d, idt = %d \n', id_first, id_second, id_third);
     %%
     if is_merged
         %%
@@ -195,8 +191,11 @@ environment.mountable = {};
 discretization.sensorspace.resolution.angular = deg2rad(5);
 debug.remove_spikes = false;
 %%%
+%% angular merge and spike not included
 [sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, discretization, debug);
-
+vfovs = mb.flattenPolygon(vfovs);
+%% both included
+[sensor_poses, vfovs, vm] = Discretization.Sensorspace.iterative(environment, workspace_positions, discretization);
 % Discretization.Sensorspace.draw(sensor_poses);
 % cellfun(@(p) mb.drawPoint(p{1}{1}(:,2), 'color', 'g'), vfovs)
 % Discretization.Sensorspace.draw(sensor_poses_mountables, 'g');
@@ -208,9 +207,10 @@ for id_vfov = 1:numel(vfovs)
     phi = deg2rad(6);
     debug.verbose = false;
     center = sensor_poses(:, id_vfov);
-    poly_in = vfovs{id_vfov}{1}{1};
+    poly_in = vfovs{id_vfov};
     [poly, tags] = mb.mergePolygonPointsAngularDist(poly_in, phi, center, debug);
-    poly_s = mb.removePolygonAngularSpikes(poly, phi, center, tags);
+%     [poly_s, tags] = mb.mergePolygonPointsAngularDist(poly, phi, center, debug);
+    poly_s = mb.removePolygonAngularSpikes(poly, phi, center);
     cla;
     Environment.draw(environment, false);
     mb.drawPolygon(poly_in, 'color', 'r');
@@ -218,8 +218,11 @@ for id_vfov = 1:numel(vfovs)
     mb.drawPolygon(poly, 'color', 'g');
     mb.drawPoint(poly, 'color', 'g');
     
-    mb.drawPolygon(poly_s, 'color', 'm');
+        mb.drawPolygon(poly_s, 'color', 'm');
     mb.drawPoint(poly_s, 'color', 'k', 'marker', '+', 'markersize', 20);
+    
+%     mb.drawPolygon(poly_s, 'color', 'm');
+%     mb.drawPoint(poly_s, 'color', 'k', 'marker', '+', 'markersize', 20);
     
     disp(id_vfov);
     pause;
