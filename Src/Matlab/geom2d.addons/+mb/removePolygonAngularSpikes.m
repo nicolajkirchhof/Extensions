@@ -45,8 +45,8 @@ while id_third <= num_points
     %%
     %     if ~isempty(hpt)
     %         delete(hpt); delete(hply);
-    %     end
-    cla
+%     %     end
+%     cla
     p1 = poly(:, id_first);
     p2 = poly(:, id_second);
     p3 = poly(:, id_third);

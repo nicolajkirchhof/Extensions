@@ -1,4 +1,8 @@
 function loop_display(iteration, update_interval)
+%% loop_display(iteration, update_interval) displays informations about loop
+% computations. 
+% initialize with (number of iterations, update interval in sec)
+% use with (nth iteration)
 persistent tme next iterations stp
 if nargin > 1
     stp = update_interval;
