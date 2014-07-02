@@ -8,6 +8,7 @@ if nargin < 2; verbose = false; end
 %     return;
 % end
 %%
+import g2d.*;
 bpoly = mb.correctPolygon(poly);
 clearvars -except gpoly bpoly verbose
 gpoly = mb.boost2visilibity(bpoly);

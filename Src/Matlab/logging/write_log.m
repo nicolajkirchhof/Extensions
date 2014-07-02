@@ -46,14 +46,14 @@ if isempty(str)
     return;
 end
 
-% change indention
-if strcmp(str(1), ' ')
-    str = str(2:end);
-    ident = [ident '\t'];
-elseif strcmp(str(end), ' ')
-    str = ['\t' str(1:end-1)];
-    ident = ident(1:end-2);
-end
+% % change indention
+% if strcmp(str(1), ' ')
+%     str = str(2:end);
+%     ident = [ident '\t'];
+% elseif strcmp(str(end), ' ')
+%     str = ['\t' str(1:end-1)];
+%     ident = ident(1:end-2);
+% end
 
 if nargin == 1
     str = [str '\n'];

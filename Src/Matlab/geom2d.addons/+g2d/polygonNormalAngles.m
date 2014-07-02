@@ -1,6 +1,7 @@
 function [ normal_angles, poly_angles ] = polygonNormalAngles( gpoly )
 %POLYGONVERTICIES Summary of this function goes here
 %   Detailed explanation goes here
+import g2d.*;
 poly_angles = polygonAngles(gpoly);
 extract = false;
 if ~iscell(gpoly)
