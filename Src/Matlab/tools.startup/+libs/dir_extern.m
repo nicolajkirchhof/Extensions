@@ -1,3 +1,3 @@
 function path = dir_extern()
-    path = [getenv('home') 'Projects' filesep 'Extensions' filesep 'Libs' filesep 'Matlab'];
+    path = [getenv('home') filesep 'Projects' filesep 'Extensions' filesep 'Libs' filesep 'Matlab'];
 end
