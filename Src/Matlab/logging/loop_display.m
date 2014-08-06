@@ -12,7 +12,7 @@ if nargin > 1
 end
 
 if toc(tme)>next
-    write_log('%g pct %g sec to go\n', iteration*100/iterations, (toc(tme)/iteration)*(iterations-iteration));
+    fprintf(1, '%g pct %g sec to go\n', iteration*100/iterations, (toc(tme)/iteration)*(iterations-iteration));
     next = toc(tme)+stp;
 end
 return;

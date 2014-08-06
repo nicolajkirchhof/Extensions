@@ -47,8 +47,11 @@ is_all_merged = false;
 is_changed = false;
 tag = [];
 if debug.verbose
+    cla;
 gh = {};
-Environment.draw(environment, false);
+% Environment.draw(environment, false);
+mb.drawPolygon(poly);
+hold on;
 end
 %%
 while ~is_all_merged 
@@ -106,7 +109,7 @@ while ~is_all_merged
             ids_outer_ring = [ids_outer_ring, id_previous];
             id_end = id_previous;
         end
-        if ~is_inside_foreward || ~is_inside_backward
+        if ~is_inside_foreward && ~is_inside_backward
             is_changed = true;
         end
         id_next = id_next + 1;
@@ -149,6 +152,30 @@ poly_merged = poly;
 % mb.drawPoint(poly_merged(:, tags), 'color', 'r');
 
 return;
+%%
+phi = 0.1047;
+poly = [ 1365, 5819, 2570, 2570, 2470, 1447, 1365, 1365 ; 4360, 4173, 8103, 5090, 5090, 5370, 5370, 4360 ;  ];
+center = [ 5819 ; 4173 ; 2.26164 ;  ];
+
+debug.verbose = true;
+%     center = sensor_poses(:, id_vfov);
+%     poly = vfovs{id_vfov};
+    [poly_m, tags] = mb.mergePolygonPointsAngularDist(poly, phi, center,debug);
+%     [poly_s, tags] = mb.mergePolygonPointsAngularDist(poly_m, phi, center, debug);
+    
+    cla;
+%    Environment.draw(environment, false); 
+mb.drawPolygon(poly, 'color', 'r');
+mb.drawPoint(poly, 'color', 'r', 'marker', '*');
+mb.drawPolygon(poly_m, 'color', 'g');
+mb.drawPoint(poly_m, 'color', 'g');
+mb.drawPoint(poly_m(:, tags), 'color', 'm', 'marker', '^', 'markersize', 18);
+%         mb.drawPolygon(poly_s, 'color', 'm');
+%     mb.drawPoint(poly_s, 'color', 'k', 'marker', '+', 'markersize', 20);
+
+disp(id_vfov);
+pause;
+
 %% TEST with equal number of ring points to merge
 phi = 0.06;
 poly = int64([ 344, 3844, 3844, 3464, 344, 344 ; 4351, 1200, 1587, 1587, 4764, 4351 ;  ]);
