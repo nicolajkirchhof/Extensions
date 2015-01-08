@@ -17,7 +17,10 @@ for id_er = 1:numel(E_r)
     e_r_xings = cell2mat(e_r_xings_cell(flt_nonempty(:))');
     
     e_r_dists = distancePoints(e_r.begin, e_r_xings);
-    [~, e_r_xing_id] = min(e_r_dists(e_r_dists > 1));
+    flt_dists = e_r_dists > 1;
+    e_r_dists = e_r_dists(flt_dists);
+    e_r_xings = e_r_xings(flt_dists, :);
+    [~, e_r_xing_id] = min(e_r_dists);
     e_r.edge = [e_r.begin, e_r_xings(e_r_xing_id, :)];
     e_r.end = e_r_xings(e_r_xing_id, :);
     E_r{id_er} = e_r;

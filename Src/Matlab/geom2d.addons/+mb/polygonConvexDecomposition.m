@@ -1,4 +1,4 @@
-function [P_c] = polygonConvexDecomposition(bpoly)
+function [P_c, E_r] = polygonConvexDecomposition(bpoly)
 
 vpoly = mb.boost2visilibity(bpoly);
 E_r = g2d.radialPolygonSplitting(vpoly);
@@ -28,3 +28,5 @@ P_c = mb.polygonConvexDecomposition(bpoly);
 %%
 cla;
 cellfun(@(x) drawEdge(x.edge), E_r);
+
+%%

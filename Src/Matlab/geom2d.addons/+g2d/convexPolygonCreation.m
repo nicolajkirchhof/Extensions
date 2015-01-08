@@ -25,7 +25,7 @@ vpoly_edges = cell2mat(vpoly_edges_cell(:));
 %     cla
 %     drawEdge(vpoly_edges)
 E_r_edges_cell = cellfun(@(x) [x.edge; [x.end, x.begin]], E_r, 'uniformoutput', false);
-E_r_edges = cell2mat(E_r_edges_cell);
+E_r_edges = cell2mat(E_r_edges_cell(:));
 
 %%
 convex_rings = {};
@@ -139,8 +139,8 @@ if numel(P_c) ~= 10
     error('Number of Polygons wrong');
 end
 
-%%
 cla;
 cellfun(@(x) drawEdge(x.edge), E_r);
 
+%%
 

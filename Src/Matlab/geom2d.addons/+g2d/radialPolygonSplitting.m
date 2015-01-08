@@ -31,7 +31,7 @@ for idring = 2:gpoly_ringnum
 end
 
 % calculate all convex angles of holes cw orientation required
-[normal_angles, angles] = g2d.polygonNormalAngles(gpoly);
+[normal_angles, angles] = g2d.polygonRadialAngles(gpoly);
 
 flt_convex_angles = cellfun(@(x) x>pi, angles, 'uniformoutput', false);
 % special case, polygon has no holes and is already convex
@@ -67,6 +67,9 @@ for idring = 1:numel(gpoly)
         
         e_r = g2d.calculateRadialEdges(e_r, gpoly);
         
+%         h = drawEdge(e_r.edge);
+%         delete(h);
+        
         E_r{end+1} = e_r; %#ok<AGROW>
     end
 end
@@ -91,3 +94,21 @@ if numel(E_r) ~= 12
     error('Wrong number of edges');
 end
 
+%%
+filename = 'res/floorplans/SmallFlat.dxf';
+% [c_Line,c_Poly,c_Cir,c_Arc,c_Poi] = f_LectDxf(filename);
+cla
+% polys = c_Poly(:,1);
+% edges = c_Line(:,1);
+% circles = c_Cir(:,1);
+env = environment.load(filename);
+env.obstacles = {};
+env_comb = environment.combine(env);
+% mb.drawPolygon(env_comb.combined);
+vpoly = mb.boost2visilibity(env_comb.combined);
+drawPolygon(vpoly);
+drawPoint(vpoly{1})
+
+E_r = g2d.radialPolygonSplitting(vpoly);
+
+cellfun(@(x) drawEdge(x.edge), E_r)

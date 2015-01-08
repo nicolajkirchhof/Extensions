@@ -45,7 +45,7 @@ while ~is_steiner_points_free
             reflex_points = checkForReflexPoints(edges);
             radial_edges = calculateRadialEdges(reflex_points, gpoly);
             
-            E_r = [E_r(:) radial_edges(:)];
+            E_r = [E_r(:); radial_edges(:)];
             
         else
             merged_edge = [];
