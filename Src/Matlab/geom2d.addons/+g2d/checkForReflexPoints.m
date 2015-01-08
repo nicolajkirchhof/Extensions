@@ -28,6 +28,8 @@ for id_edge = 1:2
         end
         
         if ~isempty(reflex_point.normal)
+            reflex_point.ang_2_1 = ang_2_1;
+            reflex_point.ang_2_3 = ang_2_3;
             reflex_points{end+1} = reflex_point;
         end
     end
