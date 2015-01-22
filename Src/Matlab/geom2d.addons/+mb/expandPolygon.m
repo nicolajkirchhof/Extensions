@@ -11,6 +11,7 @@ end
 
 function out_ring = expandRing(in_ring, dist)
     out_rings = expandPolygon(in_ring, dist);
+    out_rings = cellfun(@(x) x(~isinf(x(:,1)), :), out_rings, 'uniformoutput', false);
     if numel(out_rings) > 2
         warning('expand returned more than one, using biggest');
         areas = zeros(1,numel(out_rings));

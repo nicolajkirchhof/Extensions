@@ -1,11 +1,12 @@
 function [E_r] = steinerPointRemoval(gpoly, E_r, verbose)
 % REWRITE ACCORDING TO PAPER
-if nargin < 2; verbose = false; end
-
+if nargin < 3; verbose = false; end
+% verbose = true;
 %%
 import g2d.*;
 
 is_steiner_points_free = false;
+next_edge_nth_min = 1;
 while ~is_steiner_points_free
     %%
     e_r_edges = cell2mat(cellfun(@(x) x.edge, E_r(:)', 'uniformoutput', false)');
@@ -22,18 +23,22 @@ while ~is_steiner_points_free
     [idi] = id_intersections(find(priority_intersections, 1, 'first'));
     if isempty(idi)
         dist_filtered  =  dist_intersections ./ (edge_dist>1);
-        [val_min, id_min] = min(dist_filtered);
-        if ~isinf(val_min)
-            idi = id_intersections(id_min);
+        for nth_min = 1:next_edge_nth_min
+            [val_min, id_min] = min(dist_filtered);
+            if ~isinf(val_min)
+                idi = id_intersections(id_min);
+                dist_filtered(id_min) = inf;
+            end
         end
+        next_edge_nth_min = 1;
     end
     
     %%
     if ~isempty(idi)
         id_edges = combs(idi, :);
         edges = E_r(id_edges);
-                    merged_edge = [];
-            radial_edge = [];
+        merged_edge = [];
+        radial_edge = [];
         
         %         h = cellfun(@(x) drawPoint([x.begin;x.end]), edges);
         if edges{1}.is_merged == false && edges{2}.is_merged == false
@@ -44,8 +49,18 @@ while ~is_steiner_points_free
             new_edge.normal = edgeAngle(new_edge.edge);
             new_edge.is_merged = true;
             
+            radial_testing_edge = g2d.calculateRadialEdges(new_edge, gpoly);
+            length_nearest_poly_xing = edgeLength(radial_testing_edge.edge);
+            length_new_edge = edgeLength(new_edge.edge);
+            
+            %compare lenghts and use poly intersection if it occurs before
+            if (length_nearest_poly_xing - length_new_edge) < -1
+                next_edge_nth_min = next_edge_nth_min + 1;
+                continue;
+            end
+            
         else
-
+            
             if edges{1}.is_merged
                 merged_edge = edges{1};
                 radial_edge = edges{2};
@@ -75,17 +90,17 @@ while ~is_steiner_points_free
             length_new_edge = edgeLength(new_edge.edge);
             
             %compare lenghts and use poly intersection if it occurs before
-            if length_nearest_poly_xing < length_new_edge
+            if (length_nearest_poly_xing - length_new_edge) < -1
                 new_edge = radial_testing_edge;
             end
             
-            E_r{end+1} = merged_edge; % other one will be removed    
+            E_r{end+1} = merged_edge; % other one will be removed
         end
         
-            reflex_points = g2d.checkForReflexPoints(edges);
+        reflex_points = g2d.checkForReflexPoints(edges);
+        %%
+        for id_reflex = 1:numel(reflex_points)
             %%
-            for id_reflex = 1:numel(reflex_points)
-                %%
             flt_edges_pt_fw = distancePoints(reflex_points{id_reflex}.begin, e_r_edges(:, 1:2))<=1;
             flt_edges_pt_fw(id_edges) = 0;
             ids_edges_pt_fw = find(flt_edges_pt_fw);
@@ -93,14 +108,22 @@ while ~is_steiner_points_free
             flt_edges_pt_bw = distancePoints(reflex_points{id_reflex}.begin, e_r_edges(:, 3:4))<=1;
             flt_edges_pt_bw(id_edges) = 0;
             ids_edges_pt_bw = find(flt_edges_pt_bw);
-            is_merged = arrayfun(@(x) E_r{x}.is_merged, ids_edges_pt_bw); 
+            is_merged = arrayfun(@(x) E_r{x}.is_merged, ids_edges_pt_bw);
             
             ids_edges_pt_bw(~is_merged) = [];
-            edges_originating = [e_r_edges(ids_edges_pt_fw, :); e_r_edges(ids_edges_pt_bw, [3:4, 1:2]); new_edge.edge];
+            if distancePoints(new_edge.edge(1:2), reflex_points{id_reflex}.begin) <= 1
+                new_edge_from_reflex_pt = new_edge.edge;
+            elseif distancePoints(new_edge.edge(3:4), reflex_points{id_reflex}.begin) <= 1
+                new_edge_from_reflex_pt = new_edge.edge([3:4, 1:2]);
+            else
+                error('Assert failed!!! Investigate!!!');
+            end
+            edges_originating = [e_r_edges(ids_edges_pt_fw, :); e_r_edges(ids_edges_pt_bw, [3:4, 1:2]); new_edge_from_reflex_pt ];
             edge_angles = [normalizeAngle(edgeAngle(edges_originating)); reflex_points{id_reflex}.ang_2_1];
             
             angle_begin = reflex_points{id_reflex}.ang_2_3;
             reflex_points{id_reflex}.is_needed = false;
+            %%
             while ~isempty(edge_angles)
                 %%
                 [angle_size, id_end] = min(arrayfun(@(x) normalizeAngle(angleDiff(angle_begin, x)), edge_angles));
@@ -110,28 +133,33 @@ while ~is_steiner_points_free
                 angle_begin = edge_angles(id_end);
                 edge_angles(id_end) = [];
             end
-            end
-            %%
-            is_needed = cellfun(@(x) ~x.is_needed, reflex_points);
-            reflex_points(is_needed) = [];
-            radial_edges = calculateRadialEdges(reflex_points, gpoly);
-            %%
-            E_r = [E_r(:); radial_edges(:)];
+        end
+        %%
+        is_needed = cellfun(@(x) ~x.is_needed, reflex_points);
+        reflex_points(is_needed) = [];
+        radial_edges = calculateRadialEdges(reflex_points, gpoly);
+        %%
+        E_r = [E_r(:); radial_edges(:)];
         
         E_r{end+1} = new_edge;
         
-%         h1 = drawEdge(edges{1}.edge, 'color', 'g', 'linewidth', 2);
-%         h2 = drawEdge(edges{2}.edge, 'color', 'k', 'linewidth', 2);
-%         h3 = drawEdge(new_edge.edge, 'color', [1 1 0]);
-%         h4 = drawEdge(e_r_edges, 'linestyle', ':');
-%         is_merged = cellfun(@(x) x.is_merged, E_r);
-%         for id_merged_er = 1:numel(E_r)
-%             if E_r{id_merged_er}.is_merged
-%                 drawEdge(E_r{id_merged_er}.edge, 'color', [1 0 0], 'linewidth', 2);
-%             end
-%         end
-        %     pause;
-%         delete(h1); delete(h2); delete(h3); delete(h4); %delete(h5)  %delete(h);
+        if verbose
+                h1 = drawEdge(edges{1}.edge, 'color', 'g', 'linewidth', 2);
+                h11 = drawPoint(edges{1}.begin, 'marker', 'o', 'color', 'g', 'linewidth', 2);
+                h2 = drawEdge(edges{2}.edge, 'color', 'k', 'linewidth', 2);
+                h21 = drawPoint(edges{2}.begin, 'marker', 'o', 'color', 'g', 'linewidth', 2);
+                h3 = drawEdge(new_edge.edge, 'color', [1 1 0]);
+                h4 = drawEdge(e_r_edges, 'linestyle', ':');
+                is_merged = cellfun(@(x) x.is_merged, E_r);
+                for id_merged_er = 1:numel(E_r)
+                    if E_r{id_merged_er}.is_merged
+                        drawEdge(E_r{id_merged_er}.edge, 'color', [1 0 0], 'linewidth', 2);
+                    end
+                end
+                h5 = cellfun(@(x)drawRay(createRay(x.begin, x.normal)), reflex_points);
+                if h5 > 0; delete(h5); end
+                delete([h1(:); h11(:); h21(:)]); delete(h2); delete(h3); delete(h4); %delete(h5)  %delete(h);
+        end
         E_r(combs(idi, :)) = [];
         
     else
@@ -187,7 +215,7 @@ cla;
 axis equal
 hold on;
 % axis off
-
+axis on;
 % xlim([0 165]);
 % ylim([0 100]);
 
@@ -203,15 +231,17 @@ env_comb = environment.combine(env);
 % mb.drawPolygon(env_comb.combined);
 %%%
 vpoly_full = mb.boost2visilibity(env_comb.combined);
-vpoly = cellfun(@(x) simplifyPolyline(x, 80), vpoly_full, 'uniformoutput', false);
+vpoly = cellfun(@(x) simplifyPolyline(x, 75), vpoly_full, 'uniformoutput', false);
+vpoly{2}(:,1) = vpoly{2}(:,1)+3;
 drawPolygon(vpoly);
 
 fun_draw_edge = @(e) drawEdge(e, 'linewidth', 2, 'linestyle', '--', 'color', [0 0 0]);
 %%%
 E_r = g2d.radialPolygonSplitting(vpoly);
-% cellfun(@(x) fun_draw_edge(x.edge), E_r);
+
 %%%
 E_r = g2d.steinerPointRemoval(vpoly, E_r);
-P_c = g2d.convexPolygonCreation(vpoly, E_r);
-cellfun(@(x) drawPolygon(x), P_c);
+cellfun(@(x) fun_draw_edge(x.edge), E_r);
+% P_c = g2d.convexPolygonCreation(vpoly, E_r);
+% cellfun(@(x) drawPolygon(x), P_c);
 
