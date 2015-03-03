@@ -4,8 +4,8 @@ function [grid_sorted] = meshgrid_spiral_sort(grid_x, grid_y)
 % grid_y = grid_y;
 grid_sorted = nan(2, numel(grid_x));
 [y_length, x_length] = size(grid_x);
-
-num_rings = ceil(min([x_length, y_length])/2);
+num_rings = ceil(min([y_length, x_length])/2);
+% num_rings = ceil(y_length/2);
 cnt = 1;
 ring = 0;
 %%
