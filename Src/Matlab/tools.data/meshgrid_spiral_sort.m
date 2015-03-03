@@ -4,7 +4,8 @@ function [grid_sorted] = meshgrid_spiral_sort(grid_x, grid_y)
 % grid_y = grid_y;
 grid_sorted = nan(2, numel(grid_x));
 [y_length, x_length] = size(grid_x);
-num_rings = ceil(x_length/2);
+
+num_rings = ceil(min([x_length, y_length])/2);
 cnt = 1;
 ring = 0;
 %%
@@ -33,6 +34,7 @@ while ring < num_rings
     
     ring = ring+1;
 end
+%%
 return;
 
 %% TEST uneven

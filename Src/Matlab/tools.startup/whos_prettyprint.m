@@ -14,9 +14,9 @@ end
 % %%
 %     cellfun(@(str) fprintf(fid, '%-30s \t', str),  fieldnames(s));
 %     fprintf(fid, '\n');
-    fprintf(fid,'%-40s \t %-20s \t %-15s \t %-15s\n', 'name', 'size', 'bytes', 'class');
+    fprintf(fid,'%-15s \t %-20s \t %-15s \t %-15s\n', 'name', 'size', 'bytes', 'class');
     for ids = 1:numel(s)
-        fprintf(fid,'%-40s \t %10dx%-10d \t %-15s \t %-15s\n', ...
+        fprintf(fid,'%-15s \t %10dx%-10d \t %-15s \t %-15s\n', ...
         s(ids).name, s(ids).size, Bytes2str(s(ids).bytes), s(ids).class);
     end
 end
