@@ -101,7 +101,7 @@ xcopy $(SolutionDir)*.wkt $(TargetDir) /D</Command>
       <AdditionalOptions>/export:mexFunction %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>copy /y $(TargetDir)\$(TargetFileName)  $(TargetDir)\..\..\..\..\.</Command>
+      <Command>copy /y $(TargetPath)  $(ProjectDir)..\..\.</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

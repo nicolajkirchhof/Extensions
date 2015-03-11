@@ -142,18 +142,19 @@ mxArray *write_multipolygon(const ClipperLib::Paths & poly_out)
     mxArray *mpoly_out_matlab = mxCreateCellMatrix(1, poly_out.size());
 
 
-    for (ClipperLib::Paths::const_iterator it = poly_out.begin(); it != poly_out.end(); ++it){
+    //for (ClipperLib::Paths::const_iterator it = poly_out.begin(); it != poly_out.end(); ++it){
+    for (size_t id = 0; id < poly_out.size(); ++id){
         // assign outer ring
-        size_t num_points = it->size();
+        size_t num_points = poly_out[id].size();
         mxArray *points_out_matlab = mxCreateNumericMatrix(2, num_points, mxINT64_CLASS, mxREAL);
         int64_T(*ml_array_ptr)[2] = (int64_T(*)[2]) mxGetPr(points_out_matlab);
 
         for (int idmla = 0; idmla < num_points; ++idmla) {
-            ml_array_ptr[idmla][0] = (*it)[idmla].X;
-            ml_array_ptr[idmla][1] = (*it)[idmla].Y;
+            ml_array_ptr[idmla][0] = poly_out[id][idmla].X;
+            ml_array_ptr[idmla][1] = poly_out[id][idmla].Y;
         }
 
-        mxSetCell(mpoly_out_matlab, 0, points_out_matlab);
+        mxSetCell(mpoly_out_matlab, id, points_out_matlab);
     }
     return mpoly_out_matlab;
 }
@@ -198,17 +199,21 @@ void bclipper(int &nlhs, mxArray *plhs[],
     const mxArray *p_clip = prhs[fn_prhs::CLIP_POLY];
     const mxArray *p_ref = prhs[fn_prhs::REF_POLY];
 
+    if (nlhs > 1){
+        plhs[1] = mxCreateDoubleScalar(0);
+    }
+
     //// fast lane, check if one of the polygons is empty
     if (mxIsEmpty(p_ref)) {
-        if(clip_type == ClipperLib::ClipType::ctIntersection || clip_type == ClipperLib::ClipType::ctDifference) { plhs[fn_prhs::REF_POLY] = mxCreateCellMatrix(1, 1); }
+        if(clip_type == ClipperLib::ClipType::ctIntersection || clip_type == ClipperLib::ClipType::ctDifference) { 
+            plhs[fn_prhs::REF_POLY] = mxCreateCellMatrix(1, 1); 
+        }
         else { plhs[0] = mxDuplicateArray(p_clip); }
 
-        return;
     } else if (mxIsEmpty(p_clip)) {
         if(clip_type == ClipperLib::ClipType::ctIntersection) { plhs[0] = mxCreateCellMatrix(1, 1); }
         else { plhs[0] = mxDuplicateArray(p_ref); }
 
-        return;
     }
     else{
         ClipperLib::Paths ref_poly = read_polygons(prhs[fn_prhs::REF_POLY]);
@@ -220,6 +225,16 @@ void bclipper(int &nlhs, mxArray *plhs[],
         clipper.Execute(clip_type, out_poly);
 
         plhs[0] = write_multipolygon(out_poly);
+
+        if (nlhs > 1){
+            double area = 0;
+
+            for (ClipperLib::Paths::const_iterator it = out_poly.begin(); it != out_poly.end(); ++it){
+                area += ClipperLib::Area(*it);
+            }
+
+            *mxGetPr(plhs[1]) = area;
+        }
 
     }
 
